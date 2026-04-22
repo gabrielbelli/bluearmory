@@ -1,0 +1,33 @@
+#!/bin/sh
+set -e
+
+REPO_URL="https://raw.githubusercontent.com/<you>/bluearmory/master"
+SKILLS_DIR=".claude/skills"
+
+die() { printf 'error: %s\n' "$1" >&2; exit 1; }
+
+[ $# -eq 0 ] && die "usage: install-skill <skill-name> [skill-name ...]"
+
+# Detect if running from cloned repo or piped from curl
+SCRIPT_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+if [ -d "$SCRIPT_DIR/skills" ]; then
+    LOCAL=true
+else
+    LOCAL=false
+fi
+
+for skill in "$@"; do
+    dest="$SKILLS_DIR/$skill"
+    mkdir -p "$dest"
+
+    if $LOCAL; then
+        src="$SCRIPT_DIR/skills/$skill/SKILL.md"
+        [ -f "$src" ] || die "skill '$skill' not found in $SCRIPT_DIR/skills/"
+        cp "$src" "$dest/SKILL.md"
+    else
+        url="$REPO_URL/skills/$skill/SKILL.md"
+        curl -sfL "$url" -o "$dest/SKILL.md" || die "failed to fetch skill '$skill'"
+    fi
+
+    printf 'installed: %s -> %s\n' "$skill" "$dest/SKILL.md"
+done
