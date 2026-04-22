@@ -17,7 +17,10 @@ IRIS_API_KEY = os.environ.get("IRIS_API_KEY", "")
 def _client() -> httpx.Client:
     return httpx.Client(
         base_url=IRIS_URL,
-        headers={"Authorization": f"Bearer {IRIS_API_KEY}"},
+        headers={
+            "Authorization": f"Bearer {IRIS_API_KEY}",
+            "User-Agent": "iris-mcp/1.0",
+        },
         verify=False,
         timeout=30,
     )

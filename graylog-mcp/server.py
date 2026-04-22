@@ -22,6 +22,7 @@ def _client() -> httpx.Client:
         headers={
             "Accept": "application/json",
             "X-Requested-By": "graylog-mcp",
+            "User-Agent": "graylog-mcp/1.0",
         },
         verify=False,
         timeout=30,
