@@ -11,14 +11,51 @@ Pre-built multi-arch images (amd64 + arm64) are published to GHCR.
 | [iris-mcp](iris-mcp/) | DFIR-IRIS case management | `docker pull ghcr.io/gabrielbelli/iris-mcp` |
 | [graylog-mcp](graylog-mcp/) | Graylog SIEM log search and alerts | `docker pull ghcr.io/gabrielbelli/graylog-mcp` |
 
-## Catalog
+## Recommended External MCPs
 
-External MCPs we recommend but don't build — see [catalog/](catalog/) for setup instructions.
+### Swiss
 
-| MCP | Source | Purpose |
-|---|---|---|
-| [Swiss](catalog/swiss.md) | [bunnyiesart/swiss](https://github.com/bunnyiesart/swiss) | Aggregated threat intelligence |
-| [Kali](catalog/kali.md) | [offsec/kali-mcp](https://github.com/offsec/kali-mcp) | Kali Linux offensive/defensive tools |
+Aggregated threat intelligence — fan-out queries across VirusTotal, AbuseIPDB, GreyNoise, Shodan, and 15+ other sources in a single call.
+
+- **Source:** [bunnyiesart/swiss](https://github.com/bunnyiesart/swiss)
+- **Image:** `ghcr.io/bunnyiesart/swiss:latest`
+
+```json
+{
+  "mcpServers": {
+    "swiss": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm", "--network", "host",
+        "-v", "${HOME}/.config/swiss/config.json:/config/swiss.json:ro",
+        "-e", "SWISS_CONFIG_PATH=/config/swiss.json",
+        "-e", "SWISS_VIRUSTOTAL_API_KEY",
+        "-e", "SWISS_ABUSEIPDB_API_KEY",
+        "-e", "SWISS_GREYNOISE_API_KEY",
+        "-e", "SWISS_SHODAN_API_KEY",
+        "ghcr.io/bunnyiesart/swiss:latest"
+      ]
+    }
+  }
+}
+```
+
+### Kali MCP
+
+Official Kali Linux MCP server from OffSec — security testing and analysis tools.
+
+- **Source:** [offsec/kali-mcp](https://github.com/offsec/kali-mcp)
+
+```json
+{
+  "mcpServers": {
+    "kali": {
+      "command": "ssh",
+      "args": ["-T", "-o", "RequestTTY=no", "kali", "mcp-server"]
+    }
+  }
+}
+```
 
 ## Skills
 
