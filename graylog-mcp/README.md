@@ -14,11 +14,11 @@ MCP server for the Graylog REST API — log search, alerts, streams, and system 
 ## Run
 
 ```sh
-docker build -t graylog-mcp .
+docker pull ghcr.io/gabrielbelli/graylog-mcp
 docker run -i --rm --network host \
   -e GRAYLOG_URL=http://localhost:9000 \
   -e GRAYLOG_API_TOKEN=your-token \
-  graylog-mcp
+  ghcr.io/gabrielbelli/graylog-mcp
 ```
 
 ## MCP Config
@@ -28,7 +28,7 @@ docker run -i --rm --network host \
   "mcpServers": {
     "graylog": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "--network", "host", "-e", "GRAYLOG_URL", "-e", "GRAYLOG_API_TOKEN", "graylog-mcp"],
+      "args": ["run", "-i", "--rm", "--network", "host", "-e", "GRAYLOG_URL", "-e", "GRAYLOG_API_TOKEN", "ghcr.io/gabrielbelli/graylog-mcp"],
       "env": {
         "GRAYLOG_URL": "http://localhost:9000",
         "GRAYLOG_API_TOKEN": ""

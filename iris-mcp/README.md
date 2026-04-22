@@ -12,11 +12,11 @@ MCP server for [DFIR-IRIS](https://dfir-iris.org/) — incident response case ma
 ## Run
 
 ```sh
-docker build -t iris-mcp .
+docker pull ghcr.io/gabrielbelli/iris-mcp
 docker run -i --rm --network host \
   -e IRIS_URL=https://localhost:8443 \
   -e IRIS_API_KEY=your-key \
-  iris-mcp
+  ghcr.io/gabrielbelli/iris-mcp
 ```
 
 ## MCP Config
@@ -26,7 +26,7 @@ docker run -i --rm --network host \
   "mcpServers": {
     "iris": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "--network", "host", "-e", "IRIS_URL", "-e", "IRIS_API_KEY", "iris-mcp"],
+      "args": ["run", "-i", "--rm", "--network", "host", "-e", "IRIS_URL", "-e", "IRIS_API_KEY", "ghcr.io/gabrielbelli/iris-mcp"],
       "env": {
         "IRIS_URL": "https://localhost:8443",
         "IRIS_API_KEY": ""

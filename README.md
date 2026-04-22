@@ -4,12 +4,12 @@ A collection of MCP servers and skills for blue team / SOC workflows.
 
 ## MCP Servers
 
-Each MCP is a standalone Docker image — build and run individually.
+Pre-built multi-arch images (amd64 + arm64) are published to GHCR.
 
-| MCP | Description | Build |
+| MCP | Description | Pull |
 |---|---|---|
-| [iris-mcp](iris-mcp/) | DFIR-IRIS case management | `docker build -t iris-mcp iris-mcp/` |
-| [graylog-mcp](graylog-mcp/) | Graylog SIEM log search and alerts | `docker build -t graylog-mcp graylog-mcp/` |
+| [iris-mcp](iris-mcp/) | DFIR-IRIS case management | `docker pull ghcr.io/gabrielbelli/iris-mcp` |
+| [graylog-mcp](graylog-mcp/) | Graylog SIEM log search and alerts | `docker pull ghcr.io/gabrielbelli/graylog-mcp` |
 
 ## Catalog
 
@@ -29,7 +29,7 @@ Claude Code skills for SOC workflows — install with the included script.
 ./install-skill triage
 
 # Or directly from GitHub
-curl -sL https://raw.githubusercontent.com/<you>/bluearmory/master/install-skill | sh -s triage
+curl -sL https://raw.githubusercontent.com/gabrielbelli/bluearmory/master/install-skill | sh -s triage
 ```
 
 | Skill | Description |
