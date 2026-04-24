@@ -8,11 +8,14 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+load_dotenv(Path(__file__).parent.parent / ".env")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "WARNING"))
 logger = logging.getLogger("iris-mcp")
 

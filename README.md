@@ -9,7 +9,7 @@ Pre-built multi-arch images (amd64 + arm64) are published to GHCR.
 | MCP | Description | Pull |
 |---|---|---|
 | [iris-mcp](iris-mcp/) | DFIR-IRIS case management | `docker pull ghcr.io/gabrielbelli/iris-mcp` |
-| [graylog-mcp](graylog-mcp/) | Graylog SIEM log search and alerts | `docker pull ghcr.io/gabrielbelli/graylog-mcp` |
+| [graylog-mcp](graylog-mcp/) | Graylog SIEM — log search, aggregations, alerts, pipelines, dashboards, and autonomous threat hunt | `docker pull ghcr.io/gabrielbelli/graylog-mcp` |
 
 ## Recommended External MCPs
 
@@ -71,5 +71,6 @@ curl -sL https://raw.githubusercontent.com/gabrielbelli/bluearmory/master/instal
 
 | Skill | Description |
 |---|---|
+| [graylog-hunt](skills/graylog-hunt/) | Autonomous threat hunt against Graylog 6.x — discovers streams dynamically, runs parallel log-type queries, applies SOC heuristics, auto-pivots on top lead, produces a risk-tiered report with MITRE ATT&CK mapping |
 | [triage](skills/triage/) | IOC triage workflow |
 | [report](skills/report/) | Structured incident report generation |
