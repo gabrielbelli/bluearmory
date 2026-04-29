@@ -22,7 +22,7 @@ mcp = FastMCP("dfir-iris")
 
 IRIS_URL = os.environ.get("IRIS_URL", "https://localhost:8443")
 IRIS_API_KEY = os.environ.get("IRIS_API_KEY", "")
-IRIS_VERIFY_SSL = os.getenv("IRIS_VERIFY_SSL", "false").lower() != "false"
+IRIS_VERIFY_SSL = os.getenv("IRIS_VERIFY_SSL", "true").lower() != "false"
 
 if not IRIS_API_KEY:
     logger.warning("IRIS_API_KEY is not set — all API calls will fail with 401")
