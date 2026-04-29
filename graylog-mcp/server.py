@@ -4,29 +4,79 @@ Wraps the Graylog REST API and exposes search, streams, and alert endpoints
 as MCP tools for SOC workflows.
 """
 
+import logging
 import os
+from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
+load_dotenv(Path(__file__).parent.parent / ".env")
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "WARNING"))
+logger = logging.getLogger("graylog-mcp")
 
 mcp = FastMCP("graylog")
 
 GRAYLOG_URL = os.environ.get("GRAYLOG_URL", "http://localhost:9000")
 GRAYLOG_API_TOKEN = os.environ.get("GRAYLOG_API_TOKEN", "")
+GRAYLOG_VERIFY_SSL = os.getenv("GRAYLOG_VERIFY_SSL", "true").lower() != "false"
+
+_http: httpx.Client | None = None
 
 
 def _client() -> httpx.Client:
-    return httpx.Client(
-        base_url=f"{GRAYLOG_URL}/api",
-        auth=(GRAYLOG_API_TOKEN, "token"),
-        headers={
-            "Accept": "application/json",
-            "X-Requested-By": "graylog-mcp",
-            "User-Agent": "graylog-mcp/1.0",
-        },
-        verify=False,
-        timeout=30,
-    )
+    global _http
+    if _http is None:
+        _http = httpx.Client(
+            base_url=f"{GRAYLOG_URL}/api",
+            auth=(GRAYLOG_API_TOKEN, "token"),
+            headers={
+                "Accept": "application/json",
+                "X-Requested-By": "graylog-mcp",
+                "User-Agent": "graylog-mcp/1.0",
+            },
+            verify=GRAYLOG_VERIFY_SSL,
+            timeout=30,
+        )
+    return _http
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    retry=retry_if_exception_type(httpx.TransportError),
+    reraise=True,
+)
+def _get(path: str, params: dict | None = None) -> dict:
+    logger.debug("GET %s params=%s", path, params)
+    r = _client().get(path, params=params)
+    r.raise_for_status()
+    return r.json()
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    retry=retry_if_exception_type(httpx.TransportError),
+    reraise=True,
+)
+def _post(path: str, body: dict, params: dict | None = None) -> dict:
+    logger.debug("POST %s", path)
+    r = _client().post(path, json=body, params=params)
+    r.raise_for_status()
+    return r.json()
+
+
+def _err(e: Exception) -> dict:
+    if isinstance(e, httpx.HTTPStatusError):
+        return {
+            "error": f"HTTP {e.response.status_code}",
+            "url": str(e.request.url),
+            "detail": e.response.text[:500],
+        }
+    return {"error": type(e).__name__, "detail": str(e)}
 
 
 # ── Search ─────────────────────────────────────────────────────────────────
@@ -49,15 +99,15 @@ def search_relative(
         fields: Comma-separated list of fields to return (empty = all)
         stream_id: Limit search to a specific stream ID (optional)
     """
-    params = {"query": query, "range": range_seconds, "limit": limit}
+    params: dict = {"query": query, "range": range_seconds, "limit": limit}
     if fields:
         params["fields"] = fields
     if stream_id:
         params["filter"] = f"streams:{stream_id}"
-    with _client() as c:
-        r = c.get("/search/universal/relative", params=params)
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get("/search/universal/relative", params)
+    except Exception as e:
+        return _err(e)
 
 
 @mcp.tool()
@@ -79,15 +129,15 @@ def search_absolute(
         fields: Comma-separated list of fields to return (empty = all)
         stream_id: Limit search to a specific stream ID (optional)
     """
-    params = {"query": query, "from": from_time, "to": to_time, "limit": limit}
+    params: dict = {"query": query, "from": from_time, "to": to_time, "limit": limit}
     if fields:
         params["fields"] = fields
     if stream_id:
         params["filter"] = f"streams:{stream_id}"
-    with _client() as c:
-        r = c.get("/search/universal/absolute", params=params)
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get("/search/universal/absolute", params)
+    except Exception as e:
+        return _err(e)
 
 
 @mcp.tool()
@@ -107,15 +157,15 @@ def search_keyword(
         fields: Comma-separated list of fields to return (empty = all)
         stream_id: Limit search to a specific stream ID (optional)
     """
-    params = {"query": query, "keyword": keyword, "limit": limit}
+    params: dict = {"query": query, "keyword": keyword, "limit": limit}
     if fields:
         params["fields"] = fields
     if stream_id:
         params["filter"] = f"streams:{stream_id}"
-    with _client() as c:
-        r = c.get("/search/universal/keyword", params=params)
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get("/search/universal/keyword", params)
+    except Exception as e:
+        return _err(e)
 
 
 @mcp.tool()
@@ -126,10 +176,10 @@ def get_message(message_id: str, index: str) -> dict:
         message_id: The message ID
         index: The Elasticsearch index containing the message
     """
-    with _client() as c:
-        r = c.get(f"/messages/{index}/{message_id}")
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get(f"/messages/{index}/{message_id}")
+    except Exception as e:
+        return _err(e)
 
 
 # ── Streams ────────────────────────────────────────────────────────────────
@@ -138,10 +188,10 @@ def get_message(message_id: str, index: str) -> dict:
 @mcp.tool()
 def list_streams() -> dict:
     """List all streams configured in Graylog."""
-    with _client() as c:
-        r = c.get("/streams")
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get("/streams")
+    except Exception as e:
+        return _err(e)
 
 
 @mcp.tool()
@@ -151,10 +201,10 @@ def get_stream(stream_id: str) -> dict:
     Args:
         stream_id: The stream ID
     """
-    with _client() as c:
-        r = c.get(f"/streams/{stream_id}")
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get(f"/streams/{stream_id}")
+    except Exception as e:
+        return _err(e)
 
 
 # ── Alerts / Events ───────────────────────────────────────────────────────
@@ -175,27 +225,27 @@ def search_events(
         page: Page number (default: 1)
         per_page: Results per page (default: 50)
     """
-    with _client() as c:
-        r = c.post(
+    try:
+        return _post(
             "/events/search",
-            json={
+            {
                 "query": query,
                 "timerange": {"type": "relative", "range": timerange_from},
                 "page": page,
                 "per_page": per_page,
             },
         )
-        r.raise_for_status()
-        return r.json()
+    except Exception as e:
+        return _err(e)
 
 
 @mcp.tool()
 def list_event_definitions() -> dict:
     """List all event/alert definitions configured in Graylog."""
-    with _client() as c:
-        r = c.get("/events/definitions")
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get("/events/definitions")
+    except Exception as e:
+        return _err(e)
 
 
 # ── System ─────────────────────────────────────────────────────────────────
@@ -204,19 +254,19 @@ def list_event_definitions() -> dict:
 @mcp.tool()
 def system_overview() -> dict:
     """Get Graylog system overview (version, cluster, status)."""
-    with _client() as c:
-        r = c.get("/system")
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get("/system")
+    except Exception as e:
+        return _err(e)
 
 
 @mcp.tool()
 def list_inputs() -> dict:
     """List all configured inputs in Graylog."""
-    with _client() as c:
-        r = c.get("/system/inputs")
-        r.raise_for_status()
-        return r.json()
+    try:
+        return _get("/system/inputs")
+    except Exception as e:
+        return _err(e)
 
 
 if __name__ == "__main__":
