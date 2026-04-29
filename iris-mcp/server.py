@@ -1,11 +1,12 @@
 """DFIR-IRIS MCP Server.
 
-Wraps the DFIR-IRIS REST API and exposes case management, IOC, asset, timeline,
-notes, and investigation tools as MCP tools for SOC workflows.
+Wraps the DFIR-IRIS REST API and exposes case management, IOC, asset, and timeline
+tools as MCP tools for SOC workflows.
 """
 
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -22,7 +23,7 @@ mcp = FastMCP("dfir-iris")
 
 IRIS_URL = os.environ.get("IRIS_URL", "https://localhost:8443")
 IRIS_API_KEY = os.environ.get("IRIS_API_KEY", "")
-IRIS_VERIFY_SSL = os.getenv("IRIS_VERIFY_SSL", "false").lower() != "false"
+IRIS_VERIFY_SSL = os.getenv("IRIS_VERIFY_SSL", "true").lower() != "false"
 
 if not IRIS_API_KEY:
     logger.warning("IRIS_API_KEY is not set — all API calls will fail with 401")
@@ -100,10 +101,51 @@ def _parse_since(since: str) -> datetime | None:
 
 
 @mcp.tool()
-def list_cases() -> dict:
-    """List all cases in DFIR-IRIS."""
+def list_cases(
+    status: str = "open",
+    since: str = "",
+    limit: int = 50,
+) -> dict:
+    """List DFIR-IRIS cases with optional filtering.
+
+    Args:
+        status: Filter by case status — "open", "closed", or "all" (default: "open")
+        since: Only return cases opened after this time window.
+               Accepts: "30m", "1h", "6h", "24h", "7d", "30d", or ISO datetime string.
+               Leave empty for all time.
+        limit: Maximum number of cases to return (default: 50)
+    """
     try:
-        return _get("/manage/cases/list")
+        result = _get("/manage/cases/list")
+        cases = result.get("data", result) if isinstance(result, dict) else result
+        if isinstance(cases, dict):
+            cases = cases.get("cases", [])
+
+        if status == "open":
+            cases = [c for c in cases if not c.get("case_close_date")]
+        elif status == "closed":
+            cases = [c for c in cases if c.get("case_close_date")]
+
+        cutoff = _parse_since(since)
+        if cutoff:
+            filtered = []
+            for c in cases:
+                raw = c.get("case_open_date") or c.get("open_date", "")
+                if raw:
+                    try:
+                        opened = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+                        if opened.tzinfo is None:
+                            opened = opened.replace(tzinfo=timezone.utc)
+                        if opened >= cutoff:
+                            filtered.append(c)
+                    except ValueError:
+                        filtered.append(c)
+                else:
+                    filtered.append(c)
+            cases = filtered
+
+        cases = cases[:limit]
+        return {"total": len(cases), "cases": cases}
     except Exception as e:
         return _err(e)
 
@@ -119,6 +161,34 @@ def get_case(case_id: int) -> dict:
         return _get(f"/manage/cases/{case_id}")
     except Exception as e:
         return _err(e)
+
+
+@mcp.tool()
+def get_case_summary(case_id: int) -> dict:
+    """Get a full summary of a case in one call: details, IOCs, assets, and timeline.
+
+    Fetches all four in parallel and merges into a single response.
+    Useful for the analyse-case skill which otherwise needs 4+ sequential calls.
+
+    Args:
+        case_id: The numeric case ID
+    """
+    def fetch(fn, *args):
+        try:
+            return fn(*args)
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {
+            "case":     pool.submit(fetch, _get, f"/manage/cases/{case_id}"),
+            "iocs":     pool.submit(fetch, _get, "/case/ioc/list", {"cid": case_id}),
+            "assets":   pool.submit(fetch, _get, "/case/assets/list", {"cid": case_id}),
+            "timeline": pool.submit(fetch, _get, "/case/timeline/events/list", {"cid": case_id}),
+        }
+        results = {key: f.result() for key, f in futures.items()}
+
+    return results
 
 
 @mcp.tool()
@@ -162,6 +232,70 @@ def list_iocs(case_id: int) -> dict:
     """
     try:
         return _get("/case/ioc/list", {"cid": case_id})
+    except Exception as e:
+        return _err(e)
+
+
+@mcp.tool()
+def search_ioc_global(
+    value: str,
+    status: str = "open",
+    since: str = "",
+) -> dict:
+    """Search for an IOC value across all cases in one call.
+
+    Instead of looping list_iocs() per case (N sequential requests), this tool
+    fetches the filtered case pool and fans out IOC lookups in parallel using a
+    thread pool — much faster for large case volumes.
+
+    Args:
+        value: IOC value to search for (IP, hash, domain, username, etc.) — case-insensitive substring match
+        status: Only search cases with this status — "open", "closed", or "all" (default: "open")
+        since: Narrow the case pool by time window (e.g. "24h", "7d") — same syntax as list_cases
+    """
+    try:
+        pool_result = list_cases(status=status, since=since, limit=200)
+        if "error" in pool_result:
+            return pool_result
+        cases = pool_result.get("cases", [])
+
+        matches = []
+        errors = []
+        value_lower = value.lower()
+
+        def check_case(case):
+            cid = case.get("case_id") or case.get("id")
+            if not cid:
+                return []
+            try:
+                result = _get("/case/ioc/list", {"cid": cid})
+                iocs = result.get("data", result)
+                if isinstance(iocs, dict):
+                    iocs = iocs.get("iocs", [])
+                return [
+                    {
+                        "case_id": cid,
+                        "case_name": case.get("case_name", ""),
+                        "ioc_value": ioc.get("ioc_value", ""),
+                        "ioc_type": ioc.get("ioc_type_name", ""),
+                        "ioc_description": ioc.get("ioc_description", ""),
+                        "ioc_tlp": ioc.get("ioc_tlp_name", ""),
+                    }
+                    for ioc in (iocs if isinstance(iocs, list) else [])
+                    if value_lower in str(ioc.get("ioc_value", "")).lower()
+                ]
+            except Exception as exc:
+                errors.append(f"case {cid}: {exc}")
+                return []
+
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            for result in pool.map(check_case, cases):
+                matches.extend(result)
+
+        out = {"query": value, "total_matches": len(matches), "matches": matches}
+        if errors:
+            out["errors"] = errors
+        return out
     except Exception as e:
         return _err(e)
 
