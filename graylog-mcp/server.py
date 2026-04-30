@@ -522,46 +522,89 @@ def list_streams() -> dict:
         return _err(e)
 
 
+# ── Resources (streams, dashboards, event definitions) ────────────────────
+
+
 @mcp.tool()
-def get_stream(stream_id: str) -> dict:
-    """Get details for a specific stream.
+def list_resource(resource_type: str) -> dict:
+    """List Graylog resources of a given type, returning GRNs and names.
+
+    The GRN (Graylog Resource Name) returned for each item can be passed to
+    describe_resource to fetch its full details.
 
     Args:
-        stream_id: The stream ID
+        resource_type: One of "stream", "dashboard", "event_definition"
     """
+    t = resource_type.lower().removesuffix("s").replace(" ", "_")
     try:
-        return _get(f"/streams/{stream_id}")
+        if t == "stream":
+            data = _get("/streams")
+            return {
+                "resources": [
+                    {
+                        "grn": f"grn::::stream:{s['id']}",
+                        "name": s.get("title", ""),
+                        "description": s.get("description", ""),
+                        "disabled": s.get("disabled", False),
+                    }
+                    for s in data.get("streams", [])
+                ]
+            }
+        elif t == "dashboard":
+            data = _get("/views", {"type": "DASHBOARD", "page": 1, "per_page": 100})
+            return {
+                "resources": [
+                    {
+                        "grn": f"grn::::dashboard:{v['id']}",
+                        "name": v.get("title", ""),
+                        "description": v.get("description", ""),
+                    }
+                    for v in data.get("views", [])
+                ]
+            }
+        elif t in ("event_definition", "eventdefinition", "eventdef"):
+            data = _get("/events/definitions", {"page": 1, "per_page": 100})
+            return {
+                "resources": [
+                    {
+                        "grn": f"grn::::event_definition:{e['id']}",
+                        "name": e.get("title", ""),
+                        "description": e.get("description", ""),
+                    }
+                    for e in data.get("event_definitions", [])
+                ]
+            }
+        else:
+            return {"error": f"Unknown resource_type '{resource_type}'. Use: stream, dashboard, event_definition"}
     except Exception as e:
         return _err(e)
 
 
 @mcp.tool()
-def find_stream(name: str) -> dict:
-    """Find streams whose title matches a name (case-insensitive substring match).
+def describe_resource(grn: str) -> dict:
+    """Describe a specific Graylog resource by its GRN.
 
-    Call this at the start of an investigation to resolve a human-readable stream
-    name (e.g. "firewall", "proxy", "edr", "windows") into its Graylog stream ID.
-    Pass the returned id as stream_id to any search tool to scope queries to that
-    stream only instead of searching across all streams.
+    The GRN is the identifier returned by list_resource.
+    Format: grn::::TYPE:ID  e.g. grn::::stream:abc123
 
     Args:
-        name: Partial or full stream title to search for (e.g. "firewall", "proxy", "edr")
+        grn: Graylog Resource Name (e.g. grn::::stream:abc123)
     """
+    parts = grn.split(":")
+    # GRN format: "grn::::TYPE:ID" → ["grn", "", "", "", "TYPE", "ID"]
+    if len(parts) < 6 or parts[0] != "grn":
+        return {"error": f"Invalid GRN format: {grn!r}. Expected: grn::::TYPE:ID"}
+    grn_type = parts[4]
+    entity_id = ":".join(parts[5:])
     try:
-        result = _get("/streams")
-        streams = result.get("streams", [])
-        name_lower = name.lower()
-        matches = [
-            {
-                "id": s.get("id"),
-                "title": s.get("title"),
-                "description": s.get("description", ""),
-                "disabled": s.get("disabled", False),
-            }
-            for s in streams
-            if name_lower in s.get("title", "").lower()
-        ]
-        return {"query": name, "matches": matches, "total": len(matches)}
+        if grn_type == "stream":
+            return _get(f"/streams/{entity_id}")
+        elif grn_type == "dashboard":
+            return _get(f"/views/{entity_id}")
+        elif grn_type in ("event_definition", "eventdef"):
+            return _get(f"/events/definitions/{entity_id}")
+        else:
+            return {"error": f"Unsupported GRN type: {grn_type!r}"}
     except Exception as e:
         return _err(e)
 
@@ -594,15 +637,6 @@ def search_events(
                 "per_page": per_page,
             },
         )
-    except Exception as e:
-        return _err(e)
-
-
-@mcp.tool()
-def list_event_definitions() -> dict:
-    """List all event/alert definitions configured in Graylog."""
-    try:
-        return _get("/events/definitions")
     except Exception as e:
         return _err(e)
 
@@ -662,71 +696,6 @@ def list_pipeline_connections() -> dict:
     except Exception as e:
         return _err(e)
 
-
-# ── Dashboards & Saved Searches ────────────────────────────────────────────
-
-
-@mcp.tool()
-def list_dashboards() -> dict:
-    """List all dashboards in Graylog."""
-    try:
-        return _get("/dashboards")
-    except Exception as e:
-        return _err(e)
-
-
-@mcp.tool()
-def get_dashboard(dashboard_id: str) -> dict:
-    """Get a specific dashboard with its widget list.
-
-    Args:
-        dashboard_id: The dashboard ID
-    """
-    try:
-        return _get(f"/dashboards/{dashboard_id}")
-    except Exception as e:
-        return _err(e)
-
-
-@mcp.tool()
-def list_saved_searches() -> dict:
-    """List all saved searches.
-
-    Tries the Graylog 5.x/6.x Views API first, falls back to the 4.x saved search API.
-    """
-    try:
-        return _get("/search/views", {"type": "SEARCH"})
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            try:
-                return _get("/search/saved")
-            except Exception as e2:
-                return _err(e2)
-        return _err(e)
-    except Exception as e:
-        return _err(e)
-
-
-@mcp.tool()
-def get_saved_search(search_id: str) -> dict:
-    """Get a specific saved search by ID.
-
-    Tries the Graylog 5.x/6.x Views API first, falls back to the 4.x saved search API.
-
-    Args:
-        search_id: The saved search or view ID
-    """
-    try:
-        return _get(f"/search/views/{search_id}")
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            try:
-                return _get(f"/search/saved/{search_id}")
-            except Exception as e2:
-                return _err(e2)
-        return _err(e)
-    except Exception as e:
-        return _err(e)
 
 
 # ── System ─────────────────────────────────────────────────────────────────

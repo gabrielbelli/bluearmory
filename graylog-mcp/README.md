@@ -72,20 +72,19 @@ docker run -i --rm --network host \
 | `search_histogram` | Message count bucketed over time — spot volume spikes or drops |
 | `search_field_histogram` | Numeric field value distribution over time |
 
-### Streams
+### Streams & Resources
 
 | Tool | Description |
 |---|---|
 | `list_streams` | List all streams |
-| `get_stream` | Get stream details |
-| `find_stream` | Find streams by name (case-insensitive substring match) |
+| `list_resource` | List streams, dashboards, or event definitions by type — returns GRNs |
+| `describe_resource` | Describe a specific resource by GRN (e.g. `grn::::stream:abc123`) |
 
 ### Alerts & Events
 
 | Tool | Description |
 |---|---|
 | `search_events` | Search alert events with pagination |
-| `list_event_definitions` | List all alert/event definitions |
 
 ### Pipelines
 
@@ -98,17 +97,6 @@ docker run -i --rm --network host \
 | `list_pipeline_rules` | List all pipeline rules |
 | `get_pipeline_rule` | Get rule source code and metadata |
 | `list_pipeline_connections` | Show which streams are connected to which pipelines |
-
-### Dashboards & Saved Searches
-
-> `list_saved_searches` and `get_saved_search` try the Graylog 5.x/6.x Views API first, and fall back to the 4.x saved search API automatically.
-
-| Tool | Description |
-|---|---|
-| `list_dashboards` | List all dashboards |
-| `get_dashboard` | Get a dashboard and its widget list |
-| `list_saved_searches` | List saved searches (version-agnostic) |
-| `get_saved_search` | Get a saved search by ID (version-agnostic) |
 
 ### System
 
