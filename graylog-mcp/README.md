@@ -12,6 +12,7 @@ MCP server for the Graylog REST API — log search, aggregations, alerts, pipeli
 | `GRAYLOG_API_TOKEN` | yes | — | API token (create in System → Users → Tokens) |
 | `GRAYLOG_VERIFY_SSL` | no | `true` | Set to `false` only for self-signed certs on trusted internal networks |
 | `LOG_LEVEL` | no | `WARNING` | Python log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `DOTENV_PATH` | no | `../../.env` relative to `server.py` | Override the `.env` file path for local development |
 
 ## Run
 

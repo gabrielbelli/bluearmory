@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-load_dotenv(Path(__file__).parent.parent / ".env")
+load_dotenv(os.getenv("DOTENV_PATH") or Path(__file__).parent.parent / ".env")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "WARNING"))
 logger = logging.getLogger("graylog-mcp")
 
@@ -44,10 +44,17 @@ def _client() -> httpx.Client:
     return _http
 
 
+def _reconnect(_retry_state) -> None:
+    """Drop the singleton client before each retry so a fresh connection is made."""
+    global _http
+    _http = None
+
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     retry=retry_if_exception_type(httpx.TransportError),
+    before_sleep=_reconnect,
     reraise=True,
 )
 def _get(path: str, params: dict | None = None) -> dict:
@@ -61,9 +68,10 @@ def _get(path: str, params: dict | None = None) -> dict:
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     retry=retry_if_exception_type(httpx.TransportError),
+    before_sleep=_reconnect,
     reraise=True,
 )
-def _post(path: str, body: dict, params: dict | None = None) -> dict:
+def _post(path: str, *, body: dict, params: dict | None = None) -> dict:
     logger.debug("POST %s", path)
     r = _client().post(path, json=body, params=params)
     r.raise_for_status()
@@ -94,7 +102,7 @@ def _build_filter(stream_ids: list[str]) -> dict | None:
 
 
 def _sync_search(body: dict, timeout_ms: int) -> dict:
-    return _post("/views/search/sync", body, params={"timeout": timeout_ms})
+    return _post("/views/search/sync", body=body, params={"timeout": timeout_ms})
 
 
 # ── Search (legacy — Graylog 4.x / 5.x) ──────────────────────────────────
@@ -630,7 +638,7 @@ def search_events(
     try:
         return _post(
             "/events/search",
-            {
+            body={
                 "query": query,
                 "timerange": {"type": "relative", "range": timerange_from},
                 "page": page,
