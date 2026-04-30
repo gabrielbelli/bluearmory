@@ -733,10 +733,50 @@ def get_saved_search(search_id: str) -> dict:
 
 
 @mcp.tool()
+def get_current_time() -> dict:
+    """Get the current UTC time from the server.
+
+    Use this to anchor relative time reasoning. Without it, models tend to
+    infer current time from system start time and produce wrong durations.
+    """
+    from datetime import datetime, timezone
+    return {"current_time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")}
+
+
+@mcp.tool()
 def get_system_status() -> dict:
     """Get Graylog system information (version, cluster ID, hostname, timezone, status)."""
     try:
         return _get("/system")
+    except Exception as e:
+        return _err(e)
+
+
+@mcp.tool()
+def list_fields(streams: list[str] | None = None) -> dict:
+    """List available field names, types, and capabilities.
+
+    Field names differ per stream and over time. Use this before building
+    queries to discover which fields exist and what their types are.
+    Fields marked enumerable can be grouped in aggregate_messages.
+    Fields marked numeric support metric functions (avg, min, max, sum, etc).
+
+    Tries the Graylog 6.x /views/fields API first; falls back to /system/fields
+    for Graylog 4.x/5.x (which returns names only, without type metadata).
+
+    Args:
+        streams: Stream IDs to scope the field listing (empty = all accessible streams)
+    """
+    params: dict = {}
+    if streams:
+        params["streams[]"] = streams
+    try:
+        try:
+            return _get("/views/fields", params or None)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return _get("/system/fields")
+            raise
     except Exception as e:
         return _err(e)
 

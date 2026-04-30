@@ -114,5 +114,7 @@ docker run -i --rm --network host \
 
 | Tool | Description |
 |---|---|
+| `get_current_time` | Current UTC time — use to anchor relative time reasoning in skills |
 | `get_system_status` | Graylog system info (version, cluster, hostname, timezone, status) |
+| `list_fields` | Field names, types, and capabilities — scope to streams to reduce noise |
 | `list_inputs` | List configured inputs |
