@@ -93,10 +93,6 @@ def _build_filter(stream_ids: list[str]) -> dict | None:
     return {"type": "or", "filters": filters}
 
 
-def _parse_stream_ids(stream_ids: str) -> list[str]:
-    return [s.strip() for s in stream_ids.split(",") if s.strip()]
-
-
 def _sync_search(body: dict, timeout_ms: int) -> dict:
     return _post("/views/search/sync", body, params={"timeout": timeout_ms})
 
@@ -204,55 +200,58 @@ def get_message(message_id: str, index: str) -> dict:
         return _err(e)
 
 
-# ── Search (Graylog 6.x — views/search/sync) ──────────────────────────────
+# ── Search & Aggregation (Graylog 6.x — views/search/sync) ────────────────
 
 
 @mcp.tool()
-def search_sync(
+def search_messages(
     query: str,
+    streams: list[str] | None = None,
+    stream_categories: list[str] | None = None,
+    fields: list[str] | None = None,
+    limit: int = 50,
+    offset: int = 0,
     range_seconds: int = 86400,
     from_time: str = "",
     to_time: str = "",
-    limit: int = 50,
-    fields: str = "",
-    stream_ids: str = "",
     sort_field: str = "timestamp",
     sort_order: str = "DESC",
     timeout_ms: int = 15000,
 ) -> dict:
-    """Search Graylog 6.x messages using the views/search/sync API.
+    """Search Graylog 6.x messages.
 
     Use this instead of search_relative or search_absolute on Graylog 6.x.
     The legacy /search/universal/* endpoints return no results on Graylog 6.x.
 
+    Pass the timerange via range_seconds or from_time+to_time — never embed time
+    in the query string. List only the fields you need; without fields, only
+    source and timestamp are returned. Scope to specific streams for performance.
+
     Args:
         query: Lucene query string (e.g. 'srcip:"1.2.3.4"', 'alert_severity:1')
-        range_seconds: Relative time window in seconds (default 86400 = 24h).
-                       Ignored when from_time and to_time are both set.
+        streams: Stream IDs to scope the search (empty = all streams)
+        stream_categories: Illuminate stream categories — Graylog 6.x with Illuminate only
+        fields: Field names to return. Empty = source and timestamp only.
+        limit: Maximum messages to return (default 50)
+        offset: Pagination offset (default 0)
+        range_seconds: Relative lookback in seconds (default 86400 = 24h).
+                       Ignored when from_time and to_time are both provided.
         from_time: Absolute start time ISO 8601 (e.g. 2025-04-01T00:00:00.000Z).
-                   Provide together with to_time to use an absolute range.
         to_time: Absolute end time ISO 8601.
-        limit: Maximum number of messages to return (default 50)
-        fields: Comma-separated field names to include in each message.
-                Empty string returns all stored fields.
-        stream_ids: Comma-separated stream IDs to scope the search.
-                    Empty string searches across all streams.
         sort_field: Field to sort by (default: timestamp)
         sort_order: ASC or DESC (default: DESC)
         timeout_ms: Server-side query timeout in milliseconds (default 15000)
     """
     try:
-        sid_list = _parse_stream_ids(stream_ids)
-        fields_list = [f.strip() for f in fields.split(",") if f.strip()]
         search_type: dict = {
             "id": "msgs",
             "type": "messages",
             "limit": limit,
-            "offset": 0,
+            "offset": offset,
             "sort": [{"field": sort_field, "order": sort_order}],
         }
-        if fields_list:
-            search_type["fields"] = fields_list
+        if fields:
+            search_type["fields"] = fields
 
         query_obj: dict = {
             "id": str(uuid.uuid4()),
@@ -260,9 +259,9 @@ def search_sync(
             "timerange": _build_timerange(range_seconds, from_time, to_time),
             "search_types": [search_type],
         }
-        f = _build_filter(sid_list)
-        if f:
-            query_obj["filter"] = f
+        flt = _build_filter(streams or [])
+        if flt:
+            query_obj["filter"] = flt
 
         raw = _sync_search({"queries": [query_obj]}, timeout_ms)
         qid = query_obj["id"]
@@ -278,85 +277,47 @@ def search_sync(
 
 
 @mcp.tool()
-def aggregate_terms(
-    field: str,
+def aggregate_messages(
+    groupings: list[dict],
+    metrics: list[dict] | None = None,
     query: str = "*",
-    range_seconds: int = 86400,
+    streams: list[str] | None = None,
+    stream_categories: list[str] | None = None,
+    range_seconds: int = 3600,
     from_time: str = "",
     to_time: str = "",
-    size: int = 20,
-    stream_ids: str = "",
     timeout_ms: int = 15000,
 ) -> dict:
-    """Get top-N values for a field using the Graylog 6.x views/search/sync API.
+    """Aggregate and group Graylog 6.x messages by field values or time buckets.
 
-    Use this instead of search_terms on Graylog 6.x.
+    Use this instead of search_terms or search_histogram on Graylog 6.x.
 
-    Args:
-        field: Field name to aggregate (e.g. "dstip", "alert_signature", "srcuser")
-        query: Lucene filter query (default: all messages)
-        range_seconds: Relative time window in seconds (default 86400 = 24h)
-        from_time: Absolute start time ISO 8601. Pair with to_time for absolute range.
-        to_time: Absolute end time ISO 8601.
-        size: Number of top values to return (default 20)
-        stream_ids: Comma-separated stream IDs. Empty = all streams.
-        timeout_ms: Server-side timeout in milliseconds (default 15000)
-    """
-    try:
-        sid_list = _parse_stream_ids(stream_ids)
-        search_type = {
-            "id": "terms_0",
-            "type": "pivot",
-            "row_groups": [{"type": "values", "field": field, "limit": size}],
-            "column_groups": [],
-            "series": [{"type": "count", "id": "count", "field": None}],
-            "rollup": False,
-        }
-        query_obj: dict = {
-            "id": str(uuid.uuid4()),
-            "query": {"type": "elasticsearch", "query_string": query},
-            "timerange": _build_timerange(range_seconds, from_time, to_time),
-            "search_types": [search_type],
-        }
-        f = _build_filter(sid_list)
-        if f:
-            query_obj["filter"] = f
+    Each grouping is either a field-value bucket or a time bucket:
+      {"field": "source", "limit": 10}               — top-N values for a field
+      {"field": "timestamp", "granularity": "hour"}   — time histogram
 
-        raw = _sync_search({"queries": [query_obj]}, timeout_ms)
-        qid = query_obj["id"]
-        st = raw.get("results", {}).get(qid, {}).get("search_types", {}).get("terms_0", {})
-        terms = [
-            {"value": row["key"][0], "count": row["values"][0].get("value", 0)}
-            for row in st.get("rows", [])
-            if row.get("key")
-        ]
-        return {"field": field, "terms": terms}
-    except Exception as e:
-        return _err(e)
+    granularity options: "auto", "minute", "hour", "day", "week", "month"
 
+    Each metric defines what to compute per bucket:
+      {"function": "count"}                    — message count (default)
+      {"function": "avg", "field": "bytes"}    — numeric field metric
 
-@mcp.tool()
-def aggregate_histogram(
-    query: str = "*",
-    range_seconds: int = 86400,
-    from_time: str = "",
-    to_time: str = "",
-    interval: str = "auto",
-    stream_ids: str = "",
-    timeout_ms: int = 15000,
-) -> dict:
-    """Get message count bucketed over time using the Graylog 6.x views/search/sync API.
+    metric functions: count, avg, min, max, sum, stddev, card, latest
 
-    Use this instead of search_histogram on Graylog 6.x.
+    Examples:
+      Top 10 sources:  groupings=[{"field":"source","limit":10}], metrics=[{"function":"count"}]
+      Hourly volume:   groupings=[{"field":"timestamp","granularity":"hour"}], metrics=[{"function":"count"}]
+      Avg bytes/dest:  groupings=[{"field":"dstip","limit":20}], metrics=[{"function":"avg","field":"bytes"}]
 
     Args:
+        groupings: Required. One or more grouping dicts.
+        metrics: Metric dicts. Defaults to [{"function": "count"}].
         query: Lucene filter query (default: all messages)
-        range_seconds: Relative time window in seconds (default 86400 = 24h)
+        streams: Stream IDs to scope the search (empty = all streams)
+        stream_categories: Illuminate stream categories — Graylog 6.x with Illuminate only
+        range_seconds: Relative time window in seconds (default 3600 = 1 hour)
         from_time: Absolute start time ISO 8601. Pair with to_time for absolute range.
         to_time: Absolute end time ISO 8601.
-        interval: Bucket size — "auto", "minute", "hour", "day", "week", "month".
-                  "auto" lets Graylog choose based on the time range.
-        stream_ids: Comma-separated stream IDs. Empty = all streams.
         timeout_ms: Server-side timeout in milliseconds (default 15000)
     """
     _UNIT_MAP = {
@@ -367,26 +328,45 @@ def aggregate_histogram(
         "month": "MONTHS", "months": "MONTHS",
     }
     try:
-        sid_list = _parse_stream_ids(stream_ids)
-        if interval == "auto":
-            row_group = {
-                "type": "time",
-                "field": "timestamp",
-                "interval": {"type": "auto", "scaling": 1.0},
-            }
-        else:
-            unit = _UNIT_MAP.get(interval.lower(), "HOURS")
-            row_group = {
-                "type": "time",
-                "field": "timestamp",
-                "interval": {"type": "timeunit", "value": 1, "unit": unit},
-            }
+        row_groups = []
+        for g in groupings:
+            field = g.get("field", "")
+            if field == "timestamp" or "granularity" in g:
+                gran = g.get("granularity", "auto")
+                if gran == "auto":
+                    row_groups.append({
+                        "type": "time",
+                        "field": "timestamp",
+                        "interval": {"type": "auto", "scaling": 1.0},
+                    })
+                else:
+                    unit = _UNIT_MAP.get(gran.lower(), "HOURS")
+                    row_groups.append({
+                        "type": "time",
+                        "field": "timestamp",
+                        "interval": {"type": "timeunit", "value": 1, "unit": unit},
+                    })
+            else:
+                row_groups.append({
+                    "type": "values",
+                    "field": field,
+                    "limit": g.get("limit", 10),
+                })
+
+        series = []
+        for i, m in enumerate(metrics or [{"function": "count"}]):
+            fn = m["function"].lower()
+            s: dict = {"type": fn, "id": f"{fn}_{i}"}
+            if "field" in m:
+                s["field"] = m["field"]
+            series.append(s)
+
         search_type = {
-            "id": "hist_0",
+            "id": "agg_0",
             "type": "pivot",
-            "row_groups": [row_group],
+            "row_groups": row_groups,
             "column_groups": [],
-            "series": [{"type": "count", "id": "count", "field": None}],
+            "series": series,
             "rollup": False,
         }
         query_obj: dict = {
@@ -395,19 +375,25 @@ def aggregate_histogram(
             "timerange": _build_timerange(range_seconds, from_time, to_time),
             "search_types": [search_type],
         }
-        f = _build_filter(sid_list)
-        if f:
-            query_obj["filter"] = f
+        flt = _build_filter(streams or [])
+        if flt:
+            query_obj["filter"] = flt
 
         raw = _sync_search({"queries": [query_obj]}, timeout_ms)
         qid = query_obj["id"]
-        st = raw.get("results", {}).get(qid, {}).get("search_types", {}).get("hist_0", {})
-        buckets = [
-            {"timestamp": row["key"][0], "count": row["values"][0].get("value", 0)}
+        st = raw.get("results", {}).get(qid, {}).get("search_types", {}).get("agg_0", {})
+        rows = [
+            {
+                "key": row.get("key", []),
+                "values": {
+                    v.get("id", f"v{i}"): v.get("value")
+                    for i, v in enumerate(row.get("values", []))
+                },
+            }
             for row in st.get("rows", [])
             if row.get("key")
         ]
-        return {"interval": interval, "buckets": buckets}
+        return {"groupings": [g.get("field") for g in groupings], "rows": rows}
     except Exception as e:
         return _err(e)
 
@@ -747,8 +733,8 @@ def get_saved_search(search_id: str) -> dict:
 
 
 @mcp.tool()
-def system_overview() -> dict:
-    """Get Graylog system overview (version, cluster, status)."""
+def get_system_status() -> dict:
+    """Get Graylog system information (version, cluster ID, hostname, timezone, status)."""
     try:
         return _get("/system")
     except Exception as e:

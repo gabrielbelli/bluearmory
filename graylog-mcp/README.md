@@ -44,15 +44,15 @@ docker run -i --rm --network host \
 
 ## Tools
 
-### Search (Graylog 6.x — `views/search/sync`)
+### Search & Aggregation (Graylog 6.x — `views/search/sync`)
 
-> Use these tools on Graylog 6.x. The legacy search tools below return 0 results on 6.x.
+> Use these tools on Graylog 6.x. The legacy tools below return 0 results on 6.x.
+> Tool names and parameters match the [native Graylog 6.1+ MCP server](https://github.com/Graylog2/graylog2-server) for skill portability.
 
 | Tool | Description |
 |---|---|
-| `search_sync` | Search messages — replaces `search_relative`/`search_absolute` for Graylog 6.x |
-| `aggregate_terms` | Top-N field value counts via pivot — replaces `search_terms` for Graylog 6.x |
-| `aggregate_histogram` | Message count over time via pivot — replaces `search_histogram` for Graylog 6.x |
+| `search_messages` | Search messages — replaces `search_relative`/`search_absolute` for Graylog 6.x |
+| `aggregate_messages` | Group-by + metrics (top-N terms, histogram, any aggregation) — replaces `search_terms`/`search_histogram` for Graylog 6.x |
 
 ### Search (legacy — Graylog 4.x / 5.x only)
 
@@ -114,5 +114,5 @@ docker run -i --rm --network host \
 
 | Tool | Description |
 |---|---|
-| `system_overview` | Graylog system info (version, cluster, status) |
+| `get_system_status` | Graylog system info (version, cluster, hostname, timezone, status) |
 | `list_inputs` | List configured inputs |
