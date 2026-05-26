@@ -8,10 +8,32 @@ Pre-built multi-arch images (amd64 + arm64) are published to GHCR.
 
 | MCP | Description | Pull |
 |---|---|---|
-| [iris-mcp](iris-mcp/) | DFIR-IRIS case management | `docker pull ghcr.io/gabrielbelli/iris-mcp` |
 | [graylog-mcp](graylog-mcp/) | Graylog SIEM log search and alerts | `docker pull ghcr.io/gabrielbelli/graylog-mcp` |
 
 ## Recommended External MCPs
+
+### mcp-iris
+
+Read-only MCP server for [DFIR-IRIS](https://dfir-iris.org/) — incident response case management. Curated ~10-tool set with hard limits, rate limiting, TTL cache for reference data, and timezone-aware filtering. Replaces the prior auto-generated iris-mcp in this repo.
+
+- **Source:** [bunnyiesart/mcp-iris](https://github.com/bunnyiesart/mcp-iris)
+- **Image:** `ghcr.io/bunnyiesart/mcp-iris:latest`
+
+```json
+{
+  "mcpServers": {
+    "iris": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "IRIS_URL",
+        "-e", "IRIS_API_KEY",
+        "ghcr.io/bunnyiesart/mcp-iris:latest"
+      ]
+    }
+  }
+}
+```
 
 ### Swiss
 
