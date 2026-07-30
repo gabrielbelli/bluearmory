@@ -4,6 +4,7 @@ title: Graylog
 description: Graylog SIEM log search, streams, and alert/event queries for SOC workflows.
 image: ghcr.io/gabrielbelli/graylog-mcp:latest
 icon: https://avatars.githubusercontent.com/u/474892
+readme: https://raw.githubusercontent.com/gabrielbelli/bluearmory/master/graylog-mcp/README.md
 config:
   - name: graylog
     description: Connection to your Graylog instance

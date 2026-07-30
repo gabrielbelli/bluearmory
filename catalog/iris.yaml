@@ -4,6 +4,7 @@ title: DFIR-IRIS
 description: Read-only access to DFIR-IRIS incident-response case management — cases, alerts, IOCs, notes, and timeline.
 image: ghcr.io/bunnyiesart/mcp-iris:latest
 icon: https://avatars.githubusercontent.com/u/95911680
+readme: https://raw.githubusercontent.com/bunnyiesart/mcp-iris/main/ARCHITECTURE.md
 config:
   - name: iris
     description: Connection to your DFIR-IRIS instance
