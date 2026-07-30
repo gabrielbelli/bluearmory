@@ -27,6 +27,24 @@ in the MCP Toolkit UI or with `docker mcp secret set`.
 > only because it uses an SSH transport rather than a container image, which the
 > catalog format doesn't express.
 
+### Use it in Claude Code (TL;DR)
+
+The Docker MCP Toolkit runs one gateway that fans out to every server you enable —
+so Claude Code connects **once** and gets all of them, secrets handled by Docker.
+
+1. **Import** the catalog (above).
+2. **Enable + configure** the servers you want in Docker Desktop → MCP Toolkit
+   (toggle them on, fill in each server's secret/URL — e.g. `graylog.api_token`).
+3. **Connect Claude Code** to the gateway:
+
+   ```bash
+   docker mcp client connect claude-code --global   # or drop --global for just this repo
+   ```
+
+That's it — the enabled servers show up as tools in Claude Code. No per-server
+`docker run`, no hand-editing `mcp.json`, no secrets in your config. Add or remove
+servers in the Toolkit and Claude Code picks up the change on restart.
+
 ### Publishing the catalog (maintainers)
 
 Server definitions live in [`catalog/`](catalog/) (one YAML per server, following the
