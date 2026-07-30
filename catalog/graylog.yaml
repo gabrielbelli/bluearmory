@@ -23,16 +23,16 @@ secrets:
     env: GRAYLOG_API_TOKEN
     example: 1a2b3c4d5e6f...
 tools:
-  - name: search_relative
-  - name: search_absolute
-  - name: search_keyword
-  - name: get_message
-  - name: list_streams
-  - name: get_stream
-  - name: search_events
-  - name: list_event_definitions
-  - name: system_overview
-  - name: list_inputs
+  - name: graylog_search_relative
+  - name: graylog_search_absolute
+  - name: graylog_search_keyword
+  - name: graylog_get_message
+  - name: graylog_list_streams
+  - name: graylog_get_stream
+  - name: graylog_search_events
+  - name: graylog_list_event_definitions
+  - name: graylog_system_overview
+  - name: graylog_list_inputs
 metadata:
   category: monitoring
   tags:
