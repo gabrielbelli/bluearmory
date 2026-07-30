@@ -1,0 +1,41 @@
+name: swiss
+type: server
+title: Swiss
+description: Aggregated threat intelligence — fan-out lookups across VirusTotal, AbuseIPDB, GreyNoise, Shodan, urlscan, AlienVault OTX, and 15+ other sources in one call. Public sources run keyless; add keys to unlock more.
+image: ghcr.io/bunnyiesart/swiss:latest
+secrets:
+  - name: swiss.virustotal_api_key
+    env: SWISS_VIRUSTOTAL_API_KEY
+    example: your_virustotal_key
+  - name: swiss.abuseipdb_api_key
+    env: SWISS_ABUSEIPDB_API_KEY
+    example: your_abuseipdb_key
+  - name: swiss.alienvault_api_key
+    env: SWISS_ALIENVAULT_API_KEY
+    example: your_otx_key
+  - name: swiss.urlscan_api_key
+    env: SWISS_URLSCAN_API_KEY
+    example: your_urlscan_key
+  - name: swiss.shodan_api_key
+    env: SWISS_SHODAN_API_KEY
+    example: your_shodan_key
+  - name: swiss.greynoise_api_key
+    env: SWISS_GREYNOISE_API_KEY
+    example: your_greynoise_key
+tools:
+  - name: lookup_ip
+  - name: lookup_domain
+  - name: lookup_hash
+  - name: lookup_url
+  - name: check_exposure
+  - name: lookup_eventid
+metadata:
+  category: security
+  tags:
+    - threat-intel
+    - ioc
+    - enrichment
+    - blue-team
+    - soc
+  license: MIT
+  owner: bunnyiesart

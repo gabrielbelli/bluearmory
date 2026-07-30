@@ -1,0 +1,32 @@
+name: iris
+type: server
+title: DFIR-IRIS
+description: Read-only access to DFIR-IRIS incident-response case management — cases, alerts, IOCs, notes, and timeline.
+image: ghcr.io/bunnyiesart/mcp-iris:latest
+icon: https://avatars.githubusercontent.com/u/95911680
+config:
+  - name: iris
+    description: Connection to your DFIR-IRIS instance
+    type: object
+    properties:
+      url:
+        type: string
+        description: Base URL of the DFIR-IRIS server (e.g. https://iris.example.com)
+    required:
+      - url
+env:
+  - name: IRIS_URL
+    value: "{{iris.url}}"
+secrets:
+  - name: iris.api_key
+    env: IRIS_API_KEY
+    example: your_iris_api_key
+metadata:
+  category: security
+  tags:
+    - dfir
+    - incident-response
+    - case-management
+    - blue-team
+  license: MIT
+  owner: bunnyiesart

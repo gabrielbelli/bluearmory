@@ -2,6 +2,46 @@
 
 A collection of MCP servers and skills for blue team / SOC workflows.
 
+## Quick start: import the Docker MCP catalog
+
+bluearmory ships as a Docker MCP **catalog** — one OCI reference gets you the
+first-party servers pre-configured (name, secrets, config prompts, tool list).
+
+**Docker Desktop** → MCP Toolkit → Catalogs → **Import catalog**, then paste:
+
+```
+ghcr.io/gabrielbelli/bluearmory:latest
+```
+
+**CLI:**
+
+```bash
+docker mcp catalog pull ghcr.io/gabrielbelli/bluearmory:latest
+```
+
+Then enable the servers you want and set their secrets (e.g. `graylog.api_token`)
+in the MCP Toolkit UI or with `docker mcp secret set`.
+
+> The catalog bundles the container-based servers ([`graylog`](graylog-mcp/),
+> [`iris`](#mcp-iris), and [`swiss`](#swiss)). Kali is listed below as a manual entry
+> only because it uses an SSH transport rather than a container image, which the
+> catalog format doesn't express.
+
+### Publishing the catalog (maintainers)
+
+Server definitions live in [`catalog/`](catalog/) (one YAML per server, following the
+[MCP server entry spec](https://github.com/docker/mcp-gateway/blob/main/docs/server-entry-spec.md)).
+Build and push with:
+
+```bash
+./publish-catalog                        # → ghcr.io/gabrielbelli/bluearmory:latest
+./publish-catalog ghcr.io/you/name:tag   # custom reference
+```
+
+CI ([`.github/workflows/catalog.yml`](.github/workflows/catalog.yml)) re-publishes
+automatically on any change under `catalog/`. To add a server, drop a new
+`catalog/<name>.yaml` in place — no other edits needed.
+
 ## MCP Servers
 
 Pre-built multi-arch images (amd64 + arm64) are published to GHCR.
@@ -48,7 +88,7 @@ Aggregated threat intelligence — fan-out queries across VirusTotal, AbuseIPDB,
     "swiss": {
       "command": "docker",
       "args": [
-        "run", "-i", "--rm", "--network", "host",
+        "run", "-i", "--rm",
         "-v", "${HOME}/.config/swiss/config.json:/config/swiss.json:ro",
         "-e", "SWISS_CONFIG_PATH=/config/swiss.json",
         "-e", "SWISS_VIRUSTOTAL_API_KEY",
@@ -61,6 +101,15 @@ Aggregated threat intelligence — fan-out queries across VirusTotal, AbuseIPDB,
   }
 }
 ```
+
+> **Networking:** bridge networking (the default above) reaches public threat-intel
+> APIs and any self-hosted back-end (MISP, Graylog, DFIR-IRIS, Wazuh) that lives on
+> the web, another LAN host, or a VPN-reachable host — the container inherits the
+> host's routes. Add `--network host` **only** if a back-end is bound to `127.0.0.1`
+> on the same machine running the container; otherwise `--add-host name:ip` or a real
+> DNS name is enough. Swiss is also in the [importable catalog](#quick-start-import-the-docker-mcp-catalog),
+> which wires the common public API keys; use this manual entry for the full env
+> surface (abuse.ch, IBM X-Force, Censys, and the self-hosted MISP/Graylog/IRIS/Wazuh back-ends).
 
 ### Kali MCP
 
