@@ -45,6 +45,30 @@ That's it — the enabled servers show up as tools in Claude Code. No per-server
 `docker run`, no hand-editing `mcp.json`, no secrets in your config. Add or remove
 servers in the Toolkit and Claude Code picks up the change on restart.
 
+### Updating to the latest tools
+
+**Nothing updates automatically.** After a server image or the catalog changes, pull it
+yourself:
+
+```bash
+# 1. get the newest image (Docker never re-pulls :latest on its own)
+docker pull ghcr.io/gabrielbelli/graylog-mcp:latest
+# 2. re-import the catalog
+docker mcp catalog import ghcr.io/gabrielbelli/bluearmory:latest
+# 3. re-add the server to your profile — THIS refreshes its tools
+docker mcp profile server add <your-profile> \
+  --server catalog://ghcr.io/gabrielbelli/bluearmory:latest/graylog
+# 4. restart the gateway: Docker Desktop → MCP Toolkit → toggle the server off/on
+```
+
+Step 3 is the one people miss: your profile keeps a **frozen snapshot** of each server's
+tools from when you enabled it, so importing a new catalog alone does nothing — you must
+re-add the server to re-snapshot it. (GUI: just toggle the server off then on after
+importing.) Swap `graylog` / `<your-profile>` for the server and profile you're updating.
+
+> Still seeing old behaviour? `:latest` is cached forever once pulled — force it with
+> `docker image rm <image>:latest && docker pull <image>:latest`, then redo steps 2-4.
+
 ### Publishing the catalog (maintainers)
 
 Server definitions live in [`catalog/`](catalog/) (one YAML per server, following the
