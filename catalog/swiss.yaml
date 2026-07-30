@@ -4,6 +4,7 @@ title: Swiss
 description: Aggregated threat intelligence — fan-out lookups across VirusTotal, AbuseIPDB, GreyNoise, Shodan, urlscan, AlienVault OTX, and 15+ other sources in one call. Public sources run keyless; add keys to unlock more.
 image: ghcr.io/bunnyiesart/swiss:latest
 secrets:
+  # ── Free key, ~2 min ──────────────────────────────────────────────────────
   - name: swiss.virustotal_api_key
     env: SWISS_VIRUSTOTAL_API_KEY
     example: your_virustotal_key
@@ -16,19 +17,109 @@ secrets:
   - name: swiss.urlscan_api_key
     env: SWISS_URLSCAN_API_KEY
     example: your_urlscan_key
+  # ── abuse.ch — one key, used for all three services ───────────────────────
+  - name: swiss.malwarebazaar_api_key
+    env: SWISS_MALWAREBAZAAR_API_KEY
+    example: your_abusech_key
+  - name: swiss.threatfox_api_key
+    env: SWISS_THREATFOX_API_KEY
+    example: your_abusech_key
+  - name: swiss.urlhaus_api_key
+    env: SWISS_URLHAUS_API_KEY
+    example: your_abusech_key
+  # ── Free key, ~5 min ──────────────────────────────────────────────────────
   - name: swiss.shodan_api_key
     env: SWISS_SHODAN_API_KEY
     example: your_shodan_key
+  - name: swiss.honeypot_api_key
+    env: SWISS_HONEYPOT_API_KEY
+    example: your_projecthoneypot_key
+  - name: swiss.ibm_xforce_api_key
+    env: SWISS_IBM_XFORCE_API_KEY
+    example: your_xforce_api_key
+  - name: swiss.ibm_xforce_api_password
+    env: SWISS_IBM_XFORCE_API_PASSWORD
+    example: your_xforce_api_password
+  # ── Optional / tiered (work keyless, key unlocks more) ────────────────────
   - name: swiss.greynoise_api_key
     env: SWISS_GREYNOISE_API_KEY
     example: your_greynoise_key
+  - name: swiss.ipinfo_api_key
+    env: SWISS_IPINFO_API_KEY
+    example: your_ipinfo_key
+  - name: swiss.censys_api_key
+    env: SWISS_CENSYS_API_KEY
+    example: your_censys_api_id
+  - name: swiss.censys_api_password
+    env: SWISS_CENSYS_API_PASSWORD
+    example: your_censys_api_secret
+  # ── Self-hosted back-ends (set the matching URL under Configuration) ──────
+  - name: swiss.misp_api_key
+    env: SWISS_MISP_API_KEY
+    example: your_misp_auth_key
+  - name: swiss.graylog_password
+    env: SWISS_GRAYLOG_PASSWORD
+    example: your_graylog_password
+  - name: swiss.dfir_iris_api_key
+    env: SWISS_DFIR_IRIS_API_KEY
+    example: your_iris_api_key
+  - name: swiss.wazuh_password
+    env: SWISS_WAZUH_PASSWORD
+    example: your_wazuh_password
+config:
+  - name: swiss
+    description: Optional endpoints for self-hosted back-ends (MISP, Graylog, DFIR-IRIS, Wazuh). Leave blank to skip; set a URL to enable that integration, then add its key/password under Secrets.
+    type: object
+    properties:
+      misp_url:
+        type: string
+        description: MISP instance URL (e.g. https://misp.internal)
+      graylog_url:
+        type: string
+        description: Graylog instance URL (e.g. https://graylog.internal)
+      graylog_username:
+        type: string
+        description: Graylog username
+      dfir_iris_url:
+        type: string
+        description: DFIR-IRIS instance URL (e.g. https://iris.internal)
+      wazuh_url:
+        type: string
+        description: Wazuh API URL (e.g. https://wazuh.internal:55000)
+      wazuh_username:
+        type: string
+        description: Wazuh username
+env:
+  - name: SWISS_MISP_URL
+    value: "{{swiss.misp_url}}"
+  - name: SWISS_GRAYLOG_URL
+    value: "{{swiss.graylog_url}}"
+  - name: SWISS_GRAYLOG_USERNAME
+    value: "{{swiss.graylog_username}}"
+  - name: SWISS_DFIR_IRIS_URL
+    value: "{{swiss.dfir_iris_url}}"
+  - name: SWISS_WAZUH_URL
+    value: "{{swiss.wazuh_url}}"
+  - name: SWISS_WAZUH_USERNAME
+    value: "{{swiss.wazuh_username}}"
 tools:
   - name: lookup_ip
   - name: lookup_domain
-  - name: lookup_hash
   - name: lookup_url
-  - name: check_exposure
+  - name: lookup_hash
+  - name: lookup_cve
+  - name: lookup_mac
+  - name: lookup_useragent
   - name: lookup_eventid
+  - name: lookup_technique
+  - name: lookup_lolbas
+  - name: lookup_blockchain
+  - name: resolve_domain
+  - name: check_exposure
+  - name: detect_waf
+  - name: recon
+  - name: enrich
+  - name: decode
 metadata:
   category: security
   tags:
