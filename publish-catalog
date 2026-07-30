@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Build the bluearmory MCP catalog from catalog/*.yaml and push it to an OCI registry.
+# Users then import it in Docker Desktop → MCP Toolkit → Catalogs → Import catalog,
+# or with:  docker mcp catalog pull <oci-ref>
+#
+# Usage:
+#   ./publish-catalog                       # push ghcr.io/gabrielbelli/bluearmory:latest
+#   ./publish-catalog ghcr.io/you/name:tag  # push a custom reference
+#   OCI_REF=... ./publish-catalog           # same, via env
+set -euo pipefail
+
+OCI_REF="${1:-${OCI_REF:-ghcr.io/gabrielbelli/bluearmory:latest}}"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+CATALOG_SRC="$REPO_DIR/catalog"
+RESOLVE_DIR="$HOME/.docker/mcp/catalogs"   # where --server file:// is resolved
+
+command -v docker >/dev/null || { echo "docker not found" >&2; exit 1; }
+docker mcp version >/dev/null 2>&1 || {
+  echo "The 'docker mcp' plugin is required (Docker Desktop MCP Toolkit, or the docker/mcp-gateway plugin)." >&2
+  exit 1
+}
+
+mkdir -p "$RESOLVE_DIR"
+
+# Copy every server entry into the resolve dir and collect --server flags.
+server_args=()
+copied=()
+for f in "$CATALOG_SRC"/*.yaml; do
+  base="$(basename "$f")"
+  cp "$f" "$RESOLVE_DIR/$base"
+  copied+=("$RESOLVE_DIR/$base")
+  server_args+=(--server "file://$base")
+done
+trap 'rm -f "${copied[@]}"' EXIT
+
+echo ">> Building catalog $OCI_REF"
+docker mcp catalog rm "$OCI_REF" >/dev/null 2>&1 || true
+docker mcp catalog create "$OCI_REF" \
+  --title "bluearmory — blue team / SOC MCP servers" \
+  "${server_args[@]}"
+
+echo ">> Pushing $OCI_REF"
+docker mcp catalog push "$OCI_REF"
+
+echo ">> Done. Import it with:"
+echo "     docker mcp catalog pull $OCI_REF"
+echo "   or in Docker Desktop: MCP Toolkit → Catalogs → Import catalog → $OCI_REF"

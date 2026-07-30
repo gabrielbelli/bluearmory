@@ -1,0 +1,43 @@
+name: graylog
+type: server
+title: Graylog
+description: Graylog SIEM log search, streams, and alert/event queries for SOC workflows.
+image: ghcr.io/gabrielbelli/graylog-mcp:latest
+icon: https://avatars.githubusercontent.com/u/6321561
+config:
+  - name: graylog
+    description: Connection to your Graylog instance
+    type: object
+    properties:
+      url:
+        type: string
+        description: Base URL of the Graylog server (e.g. https://graylog.example.com:9000)
+    required:
+      - url
+env:
+  - name: GRAYLOG_URL
+    value: "{{graylog.url}}"
+secrets:
+  - name: graylog.api_token
+    env: GRAYLOG_API_TOKEN
+    example: 1a2b3c4d5e6f...
+tools:
+  - name: search_relative
+  - name: search_absolute
+  - name: search_keyword
+  - name: get_message
+  - name: list_streams
+  - name: get_stream
+  - name: search_events
+  - name: list_event_definitions
+  - name: system_overview
+  - name: list_inputs
+metadata:
+  category: monitoring
+  tags:
+    - siem
+    - logs
+    - blue-team
+    - soc
+  license: MIT
+  owner: gabrielbelli
