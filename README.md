@@ -126,8 +126,30 @@ Aggregated threat intelligence — fan-out queries across VirusTotal, AbuseIPDB,
 > host's routes. Add `--network host` **only** if a back-end is bound to `127.0.0.1`
 > on the same machine running the container; otherwise `--add-host name:ip` or a real
 > DNS name is enough. Swiss is also in the [importable catalog](#quick-start-import-the-docker-mcp-catalog),
-> which wires the common public API keys; use this manual entry for the full env
-> surface (abuse.ch, IBM X-Force, Censys, and the self-hosted MISP/Graylog/IRIS/Wazuh back-ends).
+> which wires the full key/secret + self-hosted-URL surface — the manual run above is
+> mainly for the `config.json` fine-tuning described next.
+
+#### Fine-tuning swiss with `config.json`
+
+The catalog and the simple run above expose **secrets** (API keys) and **self-hosted URLs**
+— that's all you need for the default fan-out, where every public source is on. For finer
+control, swiss also reads a JSON config file (`enabled`, `favorite`, `url`, `verify_ssl`
+per source, plus custom blacklists — see [swiss's config docs](https://github.com/bunnyiesart/swiss/blob/main/docs/configuration.md)):
+
+| Field | What it does |
+|---|---|
+| `enabled` | Turn a source off entirely (e.g. skip a slow or noisy one) |
+| `favorite` | Register a source as its **own dedicated tool** (e.g. `virustotal(ip)`) on top of the fan-out |
+| `verify_ssl` | Disable TLS verification for a self-hosted back-end with a private cert |
+| custom blacklists | Add your own IOC lists as a source |
+
+> **API keys are never read from this file** — they are env-only (that's what the catalog
+> secrets / `-e` flags are for). The file controls behaviour, not credentials.
+
+To use it, mount it read-only and point `SWISS_CONFIG_PATH` at it — exactly the
+`-v .../config.json:/config/swiss.json:ro` line in the run above. Catalog users get
+the defaults out of the box; add the mount only when you want this level of control.
+The file must be mode `600` or swiss refuses to start.
 
 ### Kali MCP
 
