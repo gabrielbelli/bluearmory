@@ -23,7 +23,7 @@ Then enable the servers you want and set their secrets (e.g. `graylog.api_token`
 in the MCP Toolkit UI or with `docker mcp secret set`.
 
 > The catalog bundles the container-based servers ([`graylog`](graylog-mcp/),
-> [`iris`](#mcp-iris), and [`swiss`](#swiss)). Kali is listed below as a manual entry
+> [`iris`](#mcp-iris), [`opensearch`](#mcp-opensearch), and [`swiss`](#swiss)). Kali is listed below as a manual entry
 > only because it uses an SSH transport rather than a container image, which the
 > catalog format doesn't express.
 
@@ -87,6 +87,30 @@ Read-only MCP server for [DFIR-IRIS](https://dfir-iris.org/) — incident respon
         "-e", "IRIS_URL",
         "-e", "IRIS_API_KEY",
         "ghcr.io/bunnyiesart/mcp-iris:latest"
+      ]
+    }
+  }
+}
+```
+
+### mcp-opensearch
+
+Read-only MCP server for [OpenSearch](https://opensearch.org/) / OpenSearch Dashboards — search, aggregate, and explore log data for SOC workflows. 17 tools spanning connectivity, discovery, search (incl. PPL), and aggregations, with hard result caps.
+
+- **Source:** [bunnyiesart/mcp-opensearch](https://github.com/bunnyiesart/mcp-opensearch)
+- **Image:** `ghcr.io/bunnyiesart/mcp-opensearch:latest`
+
+```json
+{
+  "mcpServers": {
+    "opensearch": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "OPENSEARCH_DASHBOARDS_URL",
+        "-e", "OPENSEARCH_USERNAME",
+        "-e", "OPENSEARCH_PASSWORD",
+        "ghcr.io/bunnyiesart/mcp-opensearch:latest"
       ]
     }
   }

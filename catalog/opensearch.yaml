@@ -1,0 +1,62 @@
+name: opensearch
+type: server
+title: OpenSearch
+description: Read-only search, aggregation, and exploration of OpenSearch / OpenSearch Dashboards log data for SOC workflows.
+image: ghcr.io/bunnyiesart/mcp-opensearch:latest
+icon: https://avatars.githubusercontent.com/u/80134844
+readme: https://raw.githubusercontent.com/bunnyiesart/mcp-opensearch/main/README.md
+config:
+  - name: opensearch
+    description: Connection to your OpenSearch / OpenSearch Dashboards instance
+    type: object
+    properties:
+      dashboards_url:
+        type: string
+        description: Base URL of OpenSearch Dashboards (e.g. https://opensearch.example.com)
+      url:
+        type: string
+        description: Direct OpenSearch REST API endpoint (fallback if Dashboards is unavailable)
+      username:
+        type: string
+        description: Basic auth username
+    required:
+      - dashboards_url
+      - username
+env:
+  - name: OPENSEARCH_DASHBOARDS_URL
+    value: "{{opensearch.dashboards_url}}"
+  - name: OPENSEARCH_URL
+    value: "{{opensearch.url}}"
+  - name: OPENSEARCH_USERNAME
+    value: "{{opensearch.username}}"
+secrets:
+  - name: opensearch.password
+    env: OPENSEARCH_PASSWORD
+    example: your_opensearch_password
+tools:
+  - name: opensearch_test
+  - name: opensearch_cluster_health
+  - name: opensearch_list_indices
+  - name: opensearch_list_index_patterns
+  - name: opensearch_get_mapping
+  - name: opensearch_discover_fields
+  - name: opensearch_index_settings
+  - name: opensearch_search
+  - name: opensearch_count
+  - name: opensearch_ppl
+  - name: opensearch_explain
+  - name: opensearch_terms
+  - name: opensearch_multi_terms
+  - name: opensearch_histogram
+  - name: opensearch_stats
+  - name: opensearch_compare
+  - name: opensearch_api
+metadata:
+  category: monitoring
+  tags:
+    - siem
+    - logs
+    - blue-team
+    - soc
+  license: MIT
+  owner: bunnyiesart

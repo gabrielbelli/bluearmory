@@ -42,13 +42,13 @@ docker run -i --rm --network host \
 
 | Tool | Description |
 |---|---|
-| `search_relative` | Search messages with relative time range |
-| `search_absolute` | Search messages with absolute time range |
-| `search_keyword` | Search messages with natural language time range |
-| `get_message` | Retrieve a specific message by ID |
-| `list_streams` | List all streams |
-| `get_stream` | Get stream details |
-| `search_events` | Search alert events |
-| `list_event_definitions` | List alert/event definitions |
-| `system_overview` | Graylog system info |
-| `list_inputs` | List configured inputs |
+| `graylog_search_relative` | Search messages with relative time range |
+| `graylog_search_absolute` | Search messages with absolute time range |
+| `graylog_search_keyword` | Search messages with natural language time range |
+| `graylog_get_message` | Retrieve a specific message by ID |
+| `graylog_list_streams` | List all streams |
+| `graylog_get_stream` | Get stream details |
+| `graylog_search_events` | Search alert events |
+| `graylog_list_event_definitions` | List alert/event definitions |
+| `graylog_system_overview` | Graylog system info |
+| `graylog_list_inputs` | List configured inputs |

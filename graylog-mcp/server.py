@@ -32,7 +32,7 @@ def _client() -> httpx.Client:
 # ── Search ─────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_search_relative")
 def search_relative(
     query: str,
     range_seconds: int = 300,
@@ -60,7 +60,7 @@ def search_relative(
         return r.json()
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_search_absolute")
 def search_absolute(
     query: str,
     from_time: str,
@@ -90,7 +90,7 @@ def search_absolute(
         return r.json()
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_search_keyword")
 def search_keyword(
     query: str,
     keyword: str = "last 1 hour",
@@ -118,7 +118,7 @@ def search_keyword(
         return r.json()
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_get_message")
 def get_message(message_id: str, index: str) -> dict:
     """Retrieve a specific message by ID.
 
@@ -135,7 +135,7 @@ def get_message(message_id: str, index: str) -> dict:
 # ── Streams ────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_list_streams")
 def list_streams() -> dict:
     """List all streams configured in Graylog."""
     with _client() as c:
@@ -144,7 +144,7 @@ def list_streams() -> dict:
         return r.json()
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_get_stream")
 def get_stream(stream_id: str) -> dict:
     """Get details for a specific stream.
 
@@ -160,7 +160,7 @@ def get_stream(stream_id: str) -> dict:
 # ── Alerts / Events ───────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_search_events")
 def search_events(
     query: str = "",
     timerange_from: int = 3600,
@@ -189,7 +189,7 @@ def search_events(
         return r.json()
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_list_event_definitions")
 def list_event_definitions() -> dict:
     """List all event/alert definitions configured in Graylog."""
     with _client() as c:
@@ -201,7 +201,7 @@ def list_event_definitions() -> dict:
 # ── System ─────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_system_overview")
 def system_overview() -> dict:
     """Get Graylog system overview (version, cluster, status)."""
     with _client() as c:
@@ -210,7 +210,7 @@ def system_overview() -> dict:
         return r.json()
 
 
-@mcp.tool()
+@mcp.tool(name="graylog_list_inputs")
 def list_inputs() -> dict:
     """List all configured inputs in Graylog."""
     with _client() as c:
