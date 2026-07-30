@@ -3,7 +3,7 @@ type: server
 title: Swiss
 description: Aggregated threat intelligence — fan-out lookups across VirusTotal, AbuseIPDB, GreyNoise, Shodan, urlscan, AlienVault OTX, and 15+ other sources in one call. Public sources run keyless; add keys to unlock more. Secrets and self-hosted URLs are set here; for finer tuning (enable/disable sources, favourite a source to get its own tool, verify_ssl, custom blacklists) mount a config.json — see the readme.
 image: ghcr.io/bunnyiesart/swiss:latest
-readme: https://github.com/bunnyiesart/swiss/blob/main/docs/configuration.md
+readme: https://raw.githubusercontent.com/bunnyiesart/swiss/main/README.md
 secrets:
   # ── Free key, ~2 min ──────────────────────────────────────────────────────
   - name: swiss.virustotal_api_key
