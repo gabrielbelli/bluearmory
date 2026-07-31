@@ -45,6 +45,11 @@ That's it — the enabled servers show up as tools in Claude Code. No per-server
 `docker run`, no hand-editing `mcp.json`, no secrets in your config. Add or remove
 servers in the Toolkit and Claude Code picks up the change on restart.
 
+> **SOC note:** these tools return log/case data that can contain the literal value of a
+> configured secret (credential-leak cases, captured auth traffic), which the gateway's
+> default guard blocks (`MCP error 0: a secret is being returned`). You'll probably need to
+> launch the gateway with `--block-secrets=false`. Unfortunate, but expected.
+
 ### Updating to the latest tools
 
 **Nothing updates automatically.** The gateway runs each server with `--pull never` and
