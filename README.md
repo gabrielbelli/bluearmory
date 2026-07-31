@@ -50,6 +50,28 @@ servers in the Toolkit and Claude Code picks up the change on restart.
 > default guard blocks (`MCP error 0: a secret is being returned`). You'll probably need to
 > launch the gateway with `--block-secrets=false`. Unfortunate, but expected.
 
+### Turning off the secret guard
+
+The flag goes on the gateway launch command in your MCP client's config. For Claude Code,
+add it to the `MCP_DOCKER` server args (`.mcp.json` in the project, or `~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": ["mcp", "gateway", "run", "--profile", "blueteam", "--block-secrets=false"]
+    }
+  }
+}
+```
+
+Restart the client. Verify with `ps aux | grep 'gateway run'` — it should show
+`--block-secrets=false`.
+
+> **Gotcha:** if the same server is defined in both `~/.claude.json` (local scope) and
+> `.mcp.json`, the local one wins — put the flag there, or remove the duplicate.
+
 ### Updating to the latest tools
 
 **Nothing updates automatically.** The gateway runs each server with `--pull never` and
