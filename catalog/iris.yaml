@@ -23,16 +23,16 @@ secrets:
     env: IRIS_API_KEY
     example: your_iris_api_key
 tools:
-  - name: list_cases
-  - name: list_untreated_cases
-  - name: get_case
-  - name: get_case_summary
-  - name: list_case_iocs
-  - name: list_case_assets
-  - name: list_case_tasks
-  - name: get_reference_data
-  - name: search_ioc_global
-  - name: find_related_cases
+  - name: iris_list_cases
+  - name: iris_list_untreated_cases
+  - name: iris_get_case
+  - name: iris_get_case_summary
+  - name: iris_list_case_iocs
+  - name: iris_list_case_assets
+  - name: iris_list_case_tasks
+  - name: iris_get_reference_data
+  - name: iris_search_ioc_global
+  - name: iris_find_related_cases
 metadata:
   category: security
   tags:

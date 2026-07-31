@@ -47,27 +47,42 @@ servers in the Toolkit and Claude Code picks up the change on restart.
 
 ### Updating to the latest tools
 
-**Nothing updates automatically.** After a server image or the catalog changes, pull it
-yourself:
+**Nothing updates automatically.** The gateway runs each server with `--pull never` and
+serves a **frozen snapshot** of its tools, so a new image or catalog is ignored until you
+refresh by hand. Do all four steps (using `graylog` as the example — swap in your server
+and profile):
 
 ```bash
-# 1. get the newest image (Docker never re-pulls :latest on its own)
+# 1. pull the new image — the gateway only ever uses what you have pulled locally
 docker pull ghcr.io/gabrielbelli/graylog-mcp:latest
-# 2. re-import the catalog
-docker mcp catalog import ghcr.io/gabrielbelli/bluearmory:latest
-# 3. re-add the server to your profile — THIS refreshes its tools
-docker mcp profile server add <your-profile> \
+
+# 2. pull the updated catalog  (note: it is "pull", there is no "import")
+docker mcp catalog pull ghcr.io/gabrielbelli/bluearmory:latest
+
+# 3. re-add the server to re-snapshot its tools from the new catalog
+docker mcp profile server add <profile> \
   --server catalog://ghcr.io/gabrielbelli/bluearmory:latest/graylog
-# 4. restart the gateway: Docker Desktop → MCP Toolkit → toggle the server off/on
+
+# 4. re-enter the server's config — step 3 WIPES it (URL, username, etc.)
+docker mcp profile config <profile> --set graylog.url=https://your-graylog
+#    (verify: docker mcp profile config <profile> --get-all)
+
+# 5. restart the gateway: Docker Desktop → MCP Toolkit → toggle the server off/on
 ```
 
-Step 3 is the one people miss: your profile keeps a **frozen snapshot** of each server's
-tools from when you enabled it, so importing a new catalog alone does nothing — you must
-re-add the server to re-snapshot it. (GUI: just toggle the server off then on after
-importing.) Swap `graylog` / `<your-profile>` for the server and profile you're updating.
+The two steps people miss:
 
-> Still seeing old behaviour? `:latest` is cached forever once pulled — force it with
-> `docker image rm <image>:latest && docker pull <image>:latest`, then redo steps 2-4.
+- **Step 3 (re-snapshot).** The profile keeps a frozen copy of each server's tools from
+  when you enabled it. Pulling a new catalog does nothing on its own — you must re-add the
+  server. GUI equivalent: toggle the server off then on.
+- **Step 4 (re-enter config).** Re-adding a server **clears its stored config**. If you
+  skip this, the whole profile fails to activate (`Missing/invalid config: url`) and the
+  gateway won't connect at all — not just that one server. Watch for stray spaces in the
+  value; a leading space makes the URL fail as "missing protocol".
+
+> Secrets (API tokens) survive step 3 — they're stored separately, so you only re-enter the
+> non-secret config. Still seeing old behaviour after all five steps? Force a clean image:
+> `docker image rm <image>:latest && docker pull <image>:latest`, then redo from step 2.
 
 ### Publishing the catalog (maintainers)
 
