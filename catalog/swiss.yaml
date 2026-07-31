@@ -104,23 +104,36 @@ env:
   - name: SWISS_WAZUH_USERNAME
     value: "{{swiss.wazuh_username}}"
 tools:
-  - name: lookup_ip
-  - name: lookup_domain
-  - name: lookup_url
-  - name: lookup_hash
-  - name: lookup_cve
-  - name: lookup_mac
-  - name: lookup_useragent
-  - name: lookup_eventid
-  - name: lookup_technique
-  - name: lookup_lolbas
-  - name: lookup_blockchain
-  - name: resolve_domain
-  - name: check_exposure
-  - name: detect_waf
-  - name: recon
-  - name: enrich
-  - name: decode
+  # ── Prefixed tools (gateway namespacing) ──────────────────────────────────
+  - name: swiss_enrich
+  - name: swiss_lookup_ip
+  - name: swiss_lookup_domain
+  - name: swiss_lookup_url
+  - name: swiss_lookup_hash
+  - name: swiss_lookup_cve
+  - name: swiss_lookup_mac
+  - name: swiss_lookup_useragent
+  - name: swiss_lookup_eventid
+  - name: swiss_lookup_technique
+  - name: swiss_lookup_lolbas
+  - name: swiss_lookup_blockchain
+  - name: swiss_lookup_epss
+  - name: swiss_lookup_kev
+  - name: swiss_lookup_osv
+  - name: swiss_lookup_exploits
+  - name: swiss_resolve_domain
+  - name: swiss_check_exposure
+  - name: swiss_detect_waf
+  - name: swiss_recon
+  - name: swiss_decode
+  # ── Favourite direct source tools (kept unprefixed — distinctive vendor names) ──
+  - name: virustotal
+  - name: abuseipdb
+  - name: greynoise
+  - name: shodan
+  - name: urlscan
+  - name: malwarebazaar
+  - name: cymru
 metadata:
   category: security
   tags:
